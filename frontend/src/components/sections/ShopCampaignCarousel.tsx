@@ -2,139 +2,86 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
-type CarouselItem = {
+type Slide = {
+  tagline: string
   title: string
   subtitle: string
-  tagline: string
+  /** Path served from /public */
   image: string
-  objectPosition: string
-  mobilePosition: string
+  /**
+   * object-position tuned per image so full garment + model stays visible.
+   * Desktop (landscape viewport):  wide images need horizontal nudging.
+   * Mobile  (portrait viewport):   keep model centered vertically.
+   */
+  desktop: string
+  mobile: string
 }
 
-// ── All 14 showcase images ────────────────────────────────────────────────────
-const carouselItems: CarouselItem[] = [
+// ── 5 curated shop-showcase images — each reviewed visually ─────────────────
+const SLIDES: Slide[] = [
   {
+    // Portrait tall image — floral gown, full length, model back-facing
     tagline: 'SS / 2026 Campaign',
-    title: 'Luxury Editorial Edit',
-    subtitle: 'Woven in raw tussar silk and structured on heritage looms.',
-    image: '/images/showcase/Ultra_realistic_luxury_fashion_editorial_202605241208.jpeg',
-    objectPosition: '70% center',
-    mobilePosition: 'center center',
+    title: 'Editorial Floral Gown',
+    subtitle: 'Pleated maxi in hand-printed floral silk. Shot at Lake Pichola, Udaipur.',
+    image: '/images/shop-showcase/Ultra_realistic_luxury_fashion_editorial_202605241208.jpeg',
+    desktop: '62% top',    // show more of gown hem, model centered
+    mobile: '60% top',
   },
   {
+    // Landscape wide — full-length red lehenga, temple courtyard, diya decor
     tagline: 'Heritage Couture',
-    title: 'Cinematic Heritage Edit',
-    subtitle: 'Intricate textile embroidery meeting timeless structured silhouettes.',
-    image: '/images/showcase/change_the_background_2K_202605241216.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
+    title: 'Scarlet Lehenga',
+    subtitle: 'Maroon & ivory hand-embroidered lehenga with gota dupatta.',
+    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (2).jpeg',
+    desktop: '52% 18%',    // pull up to show full skirt hem without cutting face
+    mobile: '50% 15%',
   },
   {
-    tagline: 'Modern Campaign',
-    title: 'Contemporary Campaign Edit',
-    subtitle: 'Tailored neutral cuts designed for contemporary styling.',
-    image: '/images/showcase/the_model_looks_ai_the_202605241232.jpeg',
-    objectPosition: '55% center',
-    mobilePosition: 'center center',
+    // Landscape wide — seated maroon kurta, Udaipur palace backdrop
+    tagline: 'The Anarkali Edit',
+    title: 'Mewar Maroon Kurta',
+    subtitle: 'Structured anarkali in silk chiffon with star embroidery. Golden hour editorial.',
+    image: '/images/shop-showcase/change_the_ratio_2K_202605241737.jpeg',
+    desktop: '42% 35%',    // nudge left to show model; 35% keeps face + full garment
+    mobile: '42% 32%',
   },
   {
-    tagline: 'Indian Collection',
-    title: 'Mridula Silk Lehenga',
-    subtitle: 'Gold thread embroidery on Varanasi handloomed silk.',
-    image: '/images/showcase/change_the_clothing_to_the_202605211736.jpeg',
-    objectPosition: '60% center',
-    mobilePosition: 'center center',
+    // Landscape — black textured co-ord, garden setting, model centered
+    tagline: 'Contemporary Edit',
+    title: 'Obsidian Co-ord Set',
+    subtitle: 'Boucle textured top and wide-leg pant in carbon black. Garden campaign.',
+    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    desktop: '60% 12%',    // pull up to show neck detail; legs are wide pant so full visible
+    mobile: '58% 10%',
   },
   {
-    tagline: 'Chanderi Edit',
-    title: 'Zoya Chanderi Kurta',
-    subtitle: 'Natural light and breathable weaves for an effortless silhouette.',
-    image: '/images/showcase/add_some_natural_light_on_202605211810.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Sharara Series',
-    title: 'Ishwari Silk Sharara',
-    subtitle: 'Silk georgette, gota borders and celebratory flare.',
-    image: '/images/showcase/now_increase_the_quality_of_202605211723.jpeg',
-    objectPosition: '50% 20%',
-    mobilePosition: 'center 20%',
-  },
-  {
+    // Landscape — Navratri blouse close-up, candle-lit temple, dramatic
     tagline: 'Navratri Couture',
-    title: 'Navratri Couture Blouse',
-    subtitle: 'Hand-crafted mirrors and ceremonial threadwork for festive occasions.',
-    image: '/images/showcase/navratri_top.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Kutch Heritage',
-    title: 'Rabari Heritage Jacket',
-    subtitle: 'Mirror-work from Kutch, woven into a timeless vest silhouette.',
-    image: '/images/showcase/1000000419.jpg_202605231803.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Western Edit',
-    title: 'Architectural Linen Blazer',
-    subtitle: 'Premium water-resistant linen twill with structured shoulders.',
-    image: '/images/showcase/western_showcase.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Satin Luxe',
-    title: 'Luxe Satin Wrap Dress',
-    subtitle: 'Structured satin with architectural pleating and fluid drape.',
-    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221051.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Gown Collection',
-    title: 'Asymmetric Editorial Gown',
-    subtitle: 'A floor-length couture piece with clean asymmetric lines.',
-    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Campaign Outerwear',
-    title: 'Campaign Silk Trench',
-    subtitle: 'Oversized silk wrap trench for dynamic seasonal layering.',
-    image: '/images/showcase/hero_202605231903.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Couture Drape',
-    title: 'Keep The Drape',
-    subtitle: 'Editorial draping that redefines structured elegance.',
-    image: '/images/showcase/keep_the_dress_as_in_202605241226.jpeg',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
-  },
-  {
-    tagline: 'Western Campaign',
-    title: 'Western Campaign Edit',
-    subtitle: 'Modern utility silhouettes in premium natural textiles.',
-    image: '/images/showcase/western_showcase.png',
-    objectPosition: 'center center',
-    mobilePosition: 'center center',
+    title: 'Embroidered Bustier',
+    subtitle: 'Multi-colour embroidered bustier with Kutch mirrorwork and silver choker.',
+    image: '/images/shop-showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
+    desktop: '52% 28%',    // center the garment detail; this is a deliberate editorial crop
+    mobile: '50% 25%',
   },
 ]
 
-// ── Animation variants — clean crossfade with subtle zoom ────────────────────
-const variants = {
-  enter: { opacity: 0, scale: 1.04 },
-  center: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.98 },
-}
-
 const INTERVAL_MS = 2000
+
+// Crossfade: exit fades out, enter fades in simultaneously
+const variants = {
+  enter: { opacity: 0, scale: 1.025 },
+  center: {
+    opacity: 1,
+    scale: 1,
+    transition: { duration: 0.85, ease: [0.25, 1, 0.5, 1] as const },
+  },
+  exit: {
+    opacity: 0,
+    scale: 1.0,
+    transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] as const },
+  },
+}
 
 export function ShopCampaignCarousel() {
   const [index, setIndex] = useState(0)
@@ -142,7 +89,7 @@ export function ShopCampaignCarousel() {
   const [isMobile, setIsMobile] = useState(false)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // ── Responsive check ──────────────────────────────────────────────────────
+  // ── Responsive ────────────────────────────────────────────────────────────
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
@@ -152,11 +99,19 @@ export function ShopCampaignCarousel() {
 
   // ── Auto-advance every 2 s ────────────────────────────────────────────────
   const advance = useCallback(() => {
-    setIndex((i) => (i + 1) % carouselItems.length)
+    setIndex((i) => (i + 1) % SLIDES.length)
   }, [])
 
+  const resetTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    timerRef.current = setInterval(advance, INTERVAL_MS)
+  }, [advance])
+
   useEffect(() => {
-    if (paused) return
+    if (paused) {
+      if (timerRef.current) clearInterval(timerRef.current)
+      return
+    }
     timerRef.current = setInterval(advance, INTERVAL_MS)
     return () => {
       if (timerRef.current) clearInterval(timerRef.current)
@@ -164,37 +119,24 @@ export function ShopCampaignCarousel() {
   }, [paused, advance])
 
   // ── Manual nav ────────────────────────────────────────────────────────────
-  const goNext = () => {
-    setIndex((i) => (i + 1) % carouselItems.length)
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (!paused) timerRef.current = setInterval(advance, INTERVAL_MS)
-  }
+  const goNext = () => { setIndex((i) => (i + 1) % SLIDES.length); resetTimer() }
+  const goPrev = () => { setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length); resetTimer() }
+  const goTo   = (i: number) => { if (i !== index) { setIndex(i); resetTimer() } }
 
-  const goPrev = () => {
-    setIndex((i) => (i - 1 + carouselItems.length) % carouselItems.length)
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (!paused) timerRef.current = setInterval(advance, INTERVAL_MS)
-  }
-
-  const goTo = (i: number) => {
-    if (i === index) return
-    setIndex(i)
-    if (timerRef.current) clearInterval(timerRef.current)
-    if (!paused) timerRef.current = setInterval(advance, INTERVAL_MS)
-  }
-
-  const current = carouselItems[index]
+  const slide = SLIDES[index]
 
   return (
     <div
-      className="group relative w-full h-[100svh] min-h-[100svh] overflow-hidden bg-charcoal border-b border-charcoal/5"
+      className="group relative w-full overflow-hidden bg-charcoal"
+      style={{ height: '100svh', minHeight: '100svh' }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}
       onTouchEnd={() => setPaused(false)}
     >
-      {/* ── Slides ─────────────────────────────────────────────────────────── */}
-      <div className="absolute inset-0 z-0 overflow-hidden select-none">
+
+      {/* ── SLIDES — pure crossfade, no directional slide ──────────────────── */}
+      <div className="absolute inset-0 z-0">
         <AnimatePresence mode="sync" initial={false}>
           <motion.div
             key={index}
@@ -202,128 +144,123 @@ export function ShopCampaignCarousel() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={{ duration: 0.8, ease: [0.25, 1, 0.5, 1] }}
             className="absolute inset-0"
             style={{ willChange: 'opacity, transform' }}
           >
             <img
-              src={current.image}
-              alt={current.title}
-              className="h-full w-full object-cover brightness-[90%]"
-              style={{
-                objectPosition: isMobile
-                  ? current.mobilePosition
-                  : current.objectPosition,
-              }}
+              src={slide.image}
+              alt={slide.title}
               draggable={false}
               loading="eager"
+              className="h-full w-full object-cover"
+              style={{
+                objectPosition: isMobile ? slide.mobile : slide.desktop,
+                filter: 'brightness(0.88) contrast(1.02)',
+              }}
             />
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ── Gradient overlays ───────────────────────────────────────────────── */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal/70 via-charcoal/10 to-transparent z-10" />
-      <div className="pointer-events-none absolute bottom-0 inset-x-0 h-[35vh] bg-gradient-to-t from-cream via-cream/60 to-transparent z-10" />
+      {/* ── OVERLAYS — minimal: only bottom gradient to seat text ──────────── */}
+      {/* No fog/cream overlay — garments must be fully visible */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+        style={{
+          height: '55%',
+          background: 'linear-gradient(to top, rgba(17,17,17,0.72) 0%, rgba(17,17,17,0.30) 45%, transparent 100%)',
+        }}
+      />
+      {/* Cream fade at very bottom — blends into shop grid below */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
+        style={{
+          height: '18%',
+          background: 'linear-gradient(to top, #FAF8F5 0%, transparent 100%)',
+        }}
+      />
 
-      {/* ── Progress bar ────────────────────────────────────────────────────── */}
+      {/* ── PROGRESS BAR ──────────────────────────────────────────────────────── */}
       <div className="absolute top-0 inset-x-0 h-[2px] z-30 bg-white/10">
         <motion.div
-          key={index}
-          className="h-full bg-umber/80"
+          key={`prog-${index}`}
+          className="h-full bg-[#D4A574]"
           initial={{ width: '0%' }}
           animate={{ width: '100%' }}
-          transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
+          transition={{
+            duration: INTERVAL_MS / 1000,
+            ease: 'linear',
+          }}
         />
       </div>
 
-      {/* ── Slide counter ───────────────────────────────────────────────────── */}
-      <div className="absolute top-8 right-8 z-30 text-cream/60 text-[9px] uppercase tracking-[0.3em] font-sans tabular-nums">
-        {String(index + 1).padStart(2, '0')} / {String(carouselItems.length).padStart(2, '0')}
+      {/* ── SLIDE COUNTER ─────────────────────────────────────────────────────── */}
+      <div className="absolute top-6 right-6 z-30 text-white/50 text-[9px] uppercase tracking-[0.3em] font-sans tabular-nums select-none">
+        {String(index + 1).padStart(2, '0')} / {String(SLIDES.length).padStart(2, '0')}
       </div>
 
-      {/* ── Text content ────────────────────────────────────────────────────── */}
-      <div className="absolute inset-x-6 bottom-[14vh] md:inset-x-16 md:bottom-[18vh] z-20 flex flex-col md:flex-row md:items-end md:justify-between gap-6 pointer-events-none">
-        <div className="max-w-xl">
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={`tag-${index}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.45, ease: 'easeOut' }}
-              className="inline-block text-[9px] uppercase tracking-[0.35em] text-umber font-semibold mb-3"
-            >
-              {current.tagline}
-            </motion.span>
-          </AnimatePresence>
-
-          <AnimatePresence mode="wait">
-            <motion.h2
-              key={`title-${index}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.55, ease: [0.76, 0, 0.24, 1], delay: 0.05 }}
-              className="font-display font-light text-3xl sm:text-5xl md:text-6xl tracking-wide leading-none text-cream drop-shadow-sm"
-            >
-              {current.title}
-            </motion.h2>
-          </AnimatePresence>
-
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={`sub-${index}`}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.5, ease: 'easeOut', delay: 0.1 }}
-              className="mt-3 font-sans text-xs md:text-sm font-light text-cream/70 tracking-wide max-w-sm leading-relaxed"
-            >
-              {current.subtitle}
-            </motion.p>
-          </AnimatePresence>
-        </div>
-
-        {/* Dot indicators */}
-        <div className="flex items-center gap-1.5 pointer-events-auto flex-wrap max-w-[200px]">
-          {carouselItems.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className="relative h-5 w-5 flex items-center justify-center focus:outline-none"
-            >
-              <div
-                className={`rounded-full transition-all duration-300 ${
-                  i === index
-                    ? 'w-4 h-1 bg-umber'
-                    : 'w-1 h-1 bg-cream/30 hover:bg-cream/60'
-                }`}
-              />
-            </button>
-          ))}
-        </div>
+      {/* ── TEXT CONTENT ──────────────────────────────────────────────────────── */}
+      <div className="absolute inset-x-6 bottom-[15svh] md:inset-x-14 md:bottom-[17svh] z-20 pointer-events-none">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`text-${index}`}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
+            className="max-w-xl"
+          >
+            <span className="inline-block text-[9px] uppercase tracking-[0.4em] text-[#D4A574] font-semibold mb-2 font-sans">
+              {slide.tagline}
+            </span>
+            <h2 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-wide leading-[1.05] text-white drop-shadow-sm">
+              {slide.title}
+            </h2>
+            <p className="mt-3 font-sans text-[11px] md:text-sm font-light text-white/65 tracking-wide max-w-sm leading-relaxed">
+              {slide.subtitle}
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
-      {/* ── Arrow controls ──────────────────────────────────────────────────── */}
-      <div className="absolute inset-y-0 inset-x-3 md:inset-x-6 flex items-center justify-between z-20 pointer-events-none">
+      {/* ── DOT INDICATORS ────────────────────────────────────────────────────── */}
+      <div className="absolute bottom-[10svh] inset-x-6 md:inset-x-14 z-20 flex items-center gap-2">
+        {SLIDES.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            aria-label={`Go to slide ${i + 1}`}
+            className="h-6 flex items-center justify-center focus:outline-none"
+          >
+            <div
+              className={`rounded-full transition-all duration-400 ${
+                i === index
+                  ? 'w-6 h-[3px] bg-[#D4A574]'
+                  : 'w-[5px] h-[5px] bg-white/25 hover:bg-white/50'
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+
+      {/* ── ARROW CONTROLS — hidden until hover ───────────────────────────────── */}
+      <div className="absolute inset-y-0 left-4 right-4 md:left-6 md:right-6 flex items-center justify-between z-20 pointer-events-none">
         <button
           onClick={goPrev}
-          className="flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-cream backdrop-blur-sm pointer-events-auto hover:bg-charcoal hover:border-charcoal transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100"
           aria-label="Previous slide"
+          className="pointer-events-auto flex items-center justify-center h-10 w-10 rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal hover:border-white transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
         >
-          <CaretLeft size={18} weight="light" />
+          <CaretLeft size={16} weight="light" />
         </button>
-
         <button
           onClick={goNext}
-          className="flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-cream backdrop-blur-sm pointer-events-auto hover:bg-charcoal hover:border-charcoal transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100"
           aria-label="Next slide"
+          className="pointer-events-auto flex items-center justify-center h-10 w-10 rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal hover:border-white transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
         >
-          <CaretRight size={18} weight="light" />
+          <CaretRight size={16} weight="light" />
         </button>
       </div>
+
     </div>
   )
 }
