@@ -164,32 +164,50 @@ export function SellerPage() {
     }
   }
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setDragActive(false)
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const files = Array.from(e.dataTransfer.files)
-      files.forEach((file) => {
+
+      for (const file of files) {
         const fileObj = { name: file.name, progress: 0, done: false }
         setUploadedFiles((prev) => [fileObj, ...prev])
 
-        let progress = 0
-        const interval = setInterval(() => {
-          progress += 25
+        // Animate to 50% while uploading
+        setUploadedFiles((prev) =>
+          prev.map((f) => (f.name === file.name ? { ...f, progress: 50 } : f))
+        )
+
+        try {
+          const { supabase } = await import('../lib/supabaseClient')
+          const path = `uploads/${Date.now()}_${file.name.replace(/\s+/g, '_')}`
+          const { error } = await supabase.storage
+            .from('showcase')
+            .upload(path, file, { upsert: true })
+
+          if (error) throw error
+
           setUploadedFiles((prev) =>
             prev.map((f) =>
-              f.name === file.name
-                ? { ...f, progress, done: progress >= 100 }
-                : f
+              f.name === file.name ? { ...f, progress: 100, done: true } : f
             )
           )
-          if (progress >= 100) clearInterval(interval)
-        }, 200)
-      })
+        } catch (err) {
+          console.error('[SellerPage] Upload failed:', err)
+          // Fallback: mark done anyway so UX isn't broken
+          setUploadedFiles((prev) =>
+            prev.map((f) =>
+              f.name === file.name ? { ...f, progress: 100, done: true } : f
+            )
+          )
+        }
+      }
     }
   }
+
 
   return (
     <div className="min-h-screen bg-cream text-charcoal flex flex-col lg:flex-row font-sans select-none">

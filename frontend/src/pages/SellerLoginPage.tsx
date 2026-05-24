@@ -23,21 +23,19 @@ export function SellerLoginPage() {
     setIsLoading(true)
     setErrorMsg(null)
 
-    // Controlled mock delay to simulate secure authentication handshake
-    setTimeout(() => {
-      const success = login(email, password)
-      setIsLoading(false)
+    const success = await login(email, password)
+    setIsLoading(false)
 
-      if (success) {
-        setSuccessMsg('Session authenticated. Redirecting to shop...')
-        setTimeout(() => {
-          navigate('/shop')
-        }, 1200)
-      } else {
-        setErrorMsg('Invalid boutique credentials. Please check details.')
-      }
-    }, 1000)
+    if (success) {
+      setSuccessMsg('Session authenticated. Redirecting to shop...')
+      setTimeout(() => {
+        navigate('/shop')
+      }, 1200)
+    } else {
+      setErrorMsg('Invalid boutique credentials. Please check details.')
+    }
   }
+
 
   return (
     <div className="min-h-screen w-full bg-cream flex flex-col md:flex-row font-sans select-none overflow-hidden">

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { supabase } from '../lib/supabaseClient'
 
 export interface UserSession {
   id: string
@@ -8,49 +9,86 @@ export interface UserSession {
 
 interface AuthState {
   user: UserSession | null
-  login: (email: string, password: string) => boolean
-  logout: () => void
+  isLoading: boolean
+  login: (email: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
+  restoreSession: () => Promise<void>
 }
 
-export const useAuthStore = create<AuthState>((set) => {
-  // Try to load initial session from localStorage
-  const savedSession = typeof window !== 'undefined' ? localStorage.getItem('tuitui_session') : null
-  const initialUser = savedSession ? JSON.parse(savedSession) : null
+// ---------------------------------------------------------------------------
+// Role resolver — maps email to app role
+// ---------------------------------------------------------------------------
+function resolveRole(email: string): UserSession['role'] {
+  if (email.trim().toLowerCase() === 'admin@tuitui.co') return 'admin'
+  return 'seller'
+}
 
-  return {
-    user: initialUser,
-    login: (email, password) => {
-      const cleanEmail = email.trim().toLowerCase()
-      const cleanPassword = password.trim()
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  isLoading: false,
 
-      if (cleanEmail === 'vendor@tuitui.co' && cleanPassword === 'atelier') {
-        const session: UserSession = {
-          id: 'seller-1',
-          email: 'vendor@tuitui.co',
-          role: 'seller',
+  // ── RESTORE SESSION ON APP BOOT ──────────────────────────────────────────
+  restoreSession: async () => {
+    set({ isLoading: true })
+    try {
+      const { data } = await supabase.auth.getSession()
+      const session = data.session
+      if (session?.user?.email) {
+        const restoredUser: UserSession = {
+          id: session.user.id,
+          email: session.user.email,
+          role: resolveRole(session.user.email),
         }
-        localStorage.setItem('tuitui_session', JSON.stringify(session))
-        set({ user: session })
-        return true
+        set({ user: restoredUser })
       }
-      
-      if (cleanEmail === 'admin@tuitui.co' && cleanPassword === 'atelier') {
-        const session: UserSession = {
-          id: 'admin-1',
-          email: 'admin@tuitui.co',
-          role: 'admin',
-        }
-        localStorage.setItem('tuitui_session', JSON.stringify(session))
-        set({ user: session })
-        return true
+    } catch (err) {
+      console.warn('[useAuthStore] Failed to restore session:', err)
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
+  // ── LOGIN ────────────────────────────────────────────────────────────────
+  login: async (email, password) => {
+    set({ isLoading: true })
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password: password.trim(),
+      })
+
+      if (error || !data.user) {
+        console.warn('[useAuthStore] Supabase login error:', error?.message)
+        set({ isLoading: false })
+        return false
       }
 
+      const session: UserSession = {
+        id: data.user.id,
+        email: data.user.email!,
+        role: resolveRole(data.user.email!),
+      }
+
+      set({ user: session })
+      return true
+    } catch (err) {
+      console.error('[useAuthStore] Unexpected login error:', err)
       return false
-    },
-    logout: () => {
-      localStorage.removeItem('tuitui_session')
+    } finally {
+      set({ isLoading: false })
+    }
+  },
+
+  // ── LOGOUT ───────────────────────────────────────────────────────────────
+  logout: async () => {
+    try {
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.warn('[useAuthStore] Logout error:', err)
+    } finally {
       set({ user: null })
-    },
-  }
-})
+    }
+  },
+}))
+
 export default useAuthStore

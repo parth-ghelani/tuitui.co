@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { supabase } from '../lib/supabaseClient'
 
 export interface Product {
   id: string
@@ -35,12 +36,17 @@ export interface HeroSlide {
 interface ProductState {
   products: Product[]
   heroSlides: HeroSlide[]
-  addProduct: (product: Omit<Product, 'id'>) => void
-  updateProduct: (id: string, updatedFields: Partial<Product>) => void
-  deleteProduct: (id: string) => void
+  isLoading: boolean
+  fetchProducts: () => Promise<void>
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>
+  updateProduct: (id: string, updatedFields: Partial<Product>) => Promise<void>
+  deleteProduct: (id: string) => Promise<void>
   updateHeroSlide: (index: number, updatedFields: Partial<HeroSlide>) => void
 }
 
+// ---------------------------------------------------------------------------
+// Local seed data (fallback when Supabase table is empty or unreachable)
+// ---------------------------------------------------------------------------
 const initialProducts: Product[] = [
   {
     id: 'ind-1',
@@ -221,7 +227,7 @@ const initialProducts: Product[] = [
     stockStatus: 'in-stock',
     sellerId: 'seller-2',
     isFeatured: false,
-  }
+  },
 ]
 
 const initialHeroSlides: HeroSlide[] = [
@@ -231,7 +237,7 @@ const initialHeroSlides: HeroSlide[] = [
     subtitle: 'THE UDAIPUR SAGA',
     title: 'Mewar Monologue',
     heading: 'Whispering Silk, Silent Stone.',
-    narrative: 'An aesthetic dialogue between Mewar’s historic fortress walls and the fluid grace of modern hand-loomed drapes. Crafted in raw tussar silk and structural handlooms.',
+    narrative: "An aesthetic dialogue between Mewar's historic fortress walls and the fluid grace of modern hand-loomed drapes. Crafted in raw tussar silk and structural handlooms.",
     imageBg: '/images/editorial/udaipur-1.jpg',
     imageFg: '/images/editorial/udaipur-1.jpg',
     ctaText: 'Enter Udaipur',
@@ -259,7 +265,7 @@ const initialHeroSlides: HeroSlide[] = [
     subtitle: 'THE ROYAL SAREES',
     title: 'Heritage Weft',
     heading: 'Woven Dreams, Unspoken Grace.',
-    narrative: 'Intricately hand-woven metallic sarees and ensembles, layered with contemporary structural tailoring. An ode to Varanasi’s living looms.',
+    narrative: "Intricately hand-woven metallic sarees and ensembles, layered with contemporary structural tailoring. An ode to Varanasi's living looms.",
     imageBg: '/images/editorial/saree-1.jpg',
     imageFg: '/images/editorial/saree-1.jpg',
     ctaText: 'Discover drapes',
@@ -269,35 +275,155 @@ const initialHeroSlides: HeroSlide[] = [
   },
 ]
 
-export const useProductStore = create<ProductState>((set) => ({
+// ---------------------------------------------------------------------------
+// Row mapper: Supabase snake_case → camelCase Product
+// ---------------------------------------------------------------------------
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToProduct(row: any): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    price: row.price,
+    priceValue: row.price_value,
+    discountPrice: row.discount_price ?? undefined,
+    image: row.image,
+    description: row.description,
+    colors: row.colors ?? [],
+    sizes: row.sizes ?? [],
+    quantity: row.quantity,
+    stockStatus: row.stock_status,
+    sellerId: row.seller_id,
+    isFeatured: row.is_featured ?? false,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Row mapper: camelCase Product → Supabase snake_case row
+// ---------------------------------------------------------------------------
+function productToRow(p: Product | Omit<Product, 'id'>) {
+  return {
+    ...('id' in p ? { id: p.id } : {}),
+    name: p.name,
+    category: p.category,
+    price: p.price,
+    price_value: p.priceValue,
+    discount_price: p.discountPrice ?? null,
+    image: p.image,
+    description: p.description,
+    colors: p.colors,
+    sizes: p.sizes,
+    quantity: p.quantity,
+    stock_status: p.stockStatus,
+    seller_id: p.sellerId,
+    is_featured: p.isFeatured ?? false,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Store
+// ---------------------------------------------------------------------------
+export const useProductStore = create<ProductState>((set, get) => ({
   products: initialProducts,
   heroSlides: initialHeroSlides,
-  
-  addProduct: (newProd) => {
-    set((state) => {
-      const newId = `${newProd.category.toLowerCase().startsWith('indian') ? 'ind' : 'west'}-${state.products.length + 1}`
-      const createdProduct: Product = {
-        ...newProd,
-        id: newId,
+  isLoading: false,
+
+  // ── FETCH ────────────────────────────────────────────────────────────────
+  fetchProducts: async () => {
+    set({ isLoading: true })
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: true })
+
+      if (error) throw error
+
+      if (data && data.length > 0) {
+        set({ products: data.map(rowToProduct) })
+      } else {
+        // Table is empty → self-seed with local data then re-fetch
+        const rows = initialProducts.map(productToRow)
+        const { error: seedError } = await supabase.from('products').insert(rows)
+        if (!seedError) {
+          const { data: seeded } = await supabase
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: true })
+          if (seeded && seeded.length > 0) {
+            set({ products: seeded.map(rowToProduct) })
+          }
+        }
+        // If seed fails, keep initialProducts (already set)
       }
-      return { products: [...state.products, createdProduct] }
-    })
-  },
-  
-  updateProduct: (id, updatedFields) => {
-    set((state) => ({
-      products: state.products.map((p) =>
-        p.id === id ? { ...p, ...updatedFields } : p
-      )
-    }))
-  },
-  
-  deleteProduct: (id) => {
-    set((state) => ({
-      products: state.products.filter((p) => p.id !== id)
-    }))
+    } catch (err) {
+      console.warn('[useProductStore] Supabase fetch failed, using local data.', err)
+      // Keep initialProducts already set above
+    } finally {
+      set({ isLoading: false })
+    }
   },
 
+  // ── ADD ──────────────────────────────────────────────────────────────────
+  addProduct: async (newProd) => {
+    const currentProducts = get().products
+    const prefix = newProd.category.toLowerCase().startsWith('indian') ? 'ind' :
+      newProd.category.toLowerCase().startsWith('navratri') ? 'nav' : 'west'
+    const newId = `${prefix}-${currentProducts.length + 1}-${Date.now()}`
+
+    const productWithId: Product = { ...newProd, id: newId }
+
+    // Optimistic update
+    set({ products: [...currentProducts, productWithId] })
+
+    try {
+      const { error } = await supabase.from('products').insert([productToRow(productWithId)])
+      if (error) throw error
+    } catch (err) {
+      console.error('[useProductStore] addProduct failed:', err)
+      // Rollback
+      set({ products: currentProducts })
+    }
+  },
+
+  // ── UPDATE ───────────────────────────────────────────────────────────────
+  updateProduct: async (id, updatedFields) => {
+    const prev = get().products
+    const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedFields } : p))
+
+    // Optimistic update
+    set({ products: updated })
+
+    try {
+      const row = productToRow({ ...prev.find((p) => p.id === id)!, ...updatedFields })
+      const { id: _id, ...rowWithoutId } = row as typeof row & { id: string }
+      const { error } = await supabase.from('products').update(rowWithoutId).eq('id', id)
+      if (error) throw error
+    } catch (err) {
+      console.error('[useProductStore] updateProduct failed:', err)
+      // Rollback
+      set({ products: prev })
+    }
+  },
+
+  // ── DELETE ───────────────────────────────────────────────────────────────
+  deleteProduct: async (id) => {
+    const prev = get().products
+
+    // Optimistic update
+    set({ products: prev.filter((p) => p.id !== id) })
+
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      if (error) throw error
+    } catch (err) {
+      console.error('[useProductStore] deleteProduct failed:', err)
+      // Rollback
+      set({ products: prev })
+    }
+  },
+
+  // ── HERO SLIDES (local only) ─────────────────────────────────────────────
   updateHeroSlide: (index, updatedFields) => {
     set((state) => {
       const slides = [...state.heroSlides]
@@ -306,5 +432,5 @@ export const useProductStore = create<ProductState>((set) => ({
       }
       return { heroSlides: slides }
     })
-  }
+  },
 }))
