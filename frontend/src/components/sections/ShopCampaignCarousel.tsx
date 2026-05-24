@@ -66,21 +66,21 @@ const SLIDES: Slide[] = [
   },
 ]
 
-const INTERVAL_MS = 2000
+const INTERVAL_MS = 3000
 
-// Crossfade: exit fades out, enter fades in simultaneously
-const variants = {
-  enter: { opacity: 0, scale: 1.025 },
-  center: {
-    opacity: 1,
-    scale: 1,
-    transition: { duration: 0.85, ease: [0.25, 1, 0.5, 1] as const },
-  },
-  exit: {
-    opacity: 0,
-    scale: 1.0,
-    transition: { duration: 0.6, ease: [0.25, 1, 0.5, 1] as const },
-  },
+// ── Cinematic crossfade ──
+// • Enter: imperceptible scale-in (1.008 → 1) so there's no visible "pop"
+// • Exit:  slow opacity fade — image stays full-size so it dissolves cleanly
+// • Both transitions are longer than the swap feels, creating an overlap window
+const IMG_ENTER: import('motion/react').Transition = {
+  duration: 1.4,
+  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+}
+
+const slideVariants = {
+  enter:  { opacity: 0, scale: 1.008 },
+  center: { opacity: 1, scale: 1     },
+  exit:   { opacity: 0, scale: 1.0   },
 }
 
 export function ShopCampaignCarousel() {
@@ -97,7 +97,7 @@ export function ShopCampaignCarousel() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // ── Auto-advance every 2 s ────────────────────────────────────────────────
+  // ── Auto-advance every 3 s ────────────────────────────────────────────────
   const advance = useCallback(() => {
     setIndex((i) => (i + 1) % SLIDES.length)
   }, [])
@@ -135,18 +135,29 @@ export function ShopCampaignCarousel() {
       onTouchEnd={() => setPaused(false)}
     >
 
-      {/* ── SLIDES — pure crossfade, no directional slide ──────────────────── */}
+      {/* ── SLIDES — cinematic crossfade, no direction, no pop ──────────────── */}
       <div className="absolute inset-0 z-0">
-        <AnimatePresence mode="sync" initial={false}>
+        {/*
+          mode="popLayout" lets the entering slide layer on top immediately
+          while the exiting slide dissolves underneath — true crossfade.
+          mode="sync" causes them to fight (enter waits for exit = abrupt gap).
+        */}
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={index}
-            variants={variants}
+            variants={slideVariants}
             initial="enter"
             animate="center"
             exit="exit"
+            transition={IMG_ENTER}
             className="absolute inset-0"
             style={{ willChange: 'opacity, transform' }}
           >
+            {/*
+              Ken Burns: very slow continuous drift on the ACTIVE image.
+              Only translateY — no scale — so framing is never disturbed.
+              CSS animation is cheaper than JS and avoids jank during JS tasks.
+            */}
             <img
               src={slide.image}
               alt={slide.title}
@@ -155,12 +166,21 @@ export function ShopCampaignCarousel() {
               className="h-full w-full object-cover"
               style={{
                 objectPosition: isMobile ? slide.mobile : slide.desktop,
-                filter: 'brightness(0.88) contrast(1.02)',
+                filter: 'brightness(0.87) contrast(1.03) saturate(1.05)',
+                animation: 'kenburns 12s ease-in-out infinite alternate',
               }}
             />
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {/* Ken Burns keyframes — injected once, no FOUC */}
+      <style>{`
+        @keyframes kenburns {
+          from { transform: translateY(0px) scale(1);    }
+          to   { transform: translateY(-6px) scale(1.01); }
+        }
+      `}</style>
 
       {/* ── OVERLAYS — minimal: only bottom gradient to seat text ──────────── */}
       {/* No fog/cream overlay — garments must be fully visible */}
@@ -180,17 +200,15 @@ export function ShopCampaignCarousel() {
         }}
       />
 
-      {/* ── PROGRESS BAR ──────────────────────────────────────────────────────── */}
+      {/* ── PROGRESS BAR — fills over exactly INTERVAL_MS, resets per slide ──── */}
       <div className="absolute top-0 inset-x-0 h-[2px] z-30 bg-white/10">
         <motion.div
           key={`prog-${index}`}
-          className="h-full bg-[#D4A574]"
-          initial={{ width: '0%' }}
-          animate={{ width: '100%' }}
-          transition={{
-            duration: INTERVAL_MS / 1000,
-            ease: 'linear',
-          }}
+          className="h-full bg-[#D4A574]/80"
+          initial={{ scaleX: 0, originX: 0 }}
+          animate={{ scaleX: 1 }}
+          transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
+          style={{ transformOrigin: 'left center' }}
         />
       </div>
 
@@ -199,26 +217,56 @@ export function ShopCampaignCarousel() {
         {String(index + 1).padStart(2, '0')} / {String(SLIDES.length).padStart(2, '0')}
       </div>
 
-      {/* ── TEXT CONTENT ──────────────────────────────────────────────────────── */}
+      {/* ── TEXT CONTENT — staggered line-by-line entry per slide ──────────────── */}
       <div className="absolute inset-x-6 bottom-[15svh] md:inset-x-14 md:bottom-[17svh] z-20 pointer-events-none">
         <AnimatePresence mode="wait">
           <motion.div
             key={`text-${index}`}
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.55, ease: [0.25, 1, 0.5, 1] }}
+            initial="hidden"
+            animate="visible"
+            exit="out"
+            variants={{
+              hidden:  {},
+              visible: { transition: { staggerChildren: 0.08, delayChildren: 0.15 } },
+              out:     { transition: { staggerChildren: 0.04 } },
+            }}
             className="max-w-xl"
           >
-            <span className="inline-block text-[9px] uppercase tracking-[0.4em] text-[#D4A574] font-semibold mb-2 font-sans">
+            {/* Tagline */}
+            <motion.span
+              variants={{
+                hidden:  { opacity: 0, y: 10 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.16,1,0.3,1] as [number,number,number,number] } },
+                out:     { opacity: 0, y: -6,  transition: { duration: 0.35 } },
+              }}
+              className="inline-block text-[9px] uppercase tracking-[0.4em] text-[#D4A574] font-semibold mb-2 font-sans"
+            >
               {slide.tagline}
-            </span>
-            <h2 className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-wide leading-[1.05] text-white drop-shadow-sm">
+            </motion.span>
+
+            {/* Title */}
+            <motion.h2
+              variants={{
+                hidden:  { opacity: 0, y: 22 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.9, ease: [0.16,1,0.3,1] as [number,number,number,number] } },
+                out:     { opacity: 0, y: -10, transition: { duration: 0.35 } },
+              }}
+              className="font-display font-light text-3xl sm:text-4xl md:text-5xl lg:text-6xl tracking-wide leading-[1.05] text-white"
+            >
               {slide.title}
-            </h2>
-            <p className="mt-3 font-sans text-[11px] md:text-sm font-light text-white/65 tracking-wide max-w-sm leading-relaxed">
+            </motion.h2>
+
+            {/* Subtitle */}
+            <motion.p
+              variants={{
+                hidden:  { opacity: 0, y: 14 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16,1,0.3,1] as [number,number,number,number] } },
+                out:     { opacity: 0, y: -6,  transition: { duration: 0.3 } },
+              }}
+              className="mt-3 font-sans text-[11px] md:text-sm font-light text-white/60 tracking-wide max-w-sm leading-relaxed"
+            >
               {slide.subtitle}
-            </p>
+            </motion.p>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -243,22 +291,30 @@ export function ShopCampaignCarousel() {
         ))}
       </div>
 
-      {/* ── ARROW CONTROLS — hidden until hover ───────────────────────────────── */}
+      {/* ── ARROW CONTROLS — fade in on hover, smooth 400ms ──────────────────── */}
       <div className="absolute inset-y-0 left-4 right-4 md:left-6 md:right-6 flex items-center justify-between z-20 pointer-events-none">
-        <button
+        <motion.button
           onClick={goPrev}
           aria-label="Previous slide"
-          className="pointer-events-auto flex items-center justify-center h-10 w-10 rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal hover:border-white transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          transition={{ duration: 0.2 }}
+          className="pointer-events-auto flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-white hover:text-charcoal hover:border-transparent transition-colors duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
+          style={{ transition: 'opacity 0.4s ease, background 0.3s ease, color 0.3s ease' }}
         >
-          <CaretLeft size={16} weight="light" />
-        </button>
-        <button
+          <CaretLeft size={15} weight="light" />
+        </motion.button>
+        <motion.button
           onClick={goNext}
           aria-label="Next slide"
-          className="pointer-events-auto flex items-center justify-center h-10 w-10 rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal hover:border-white transition-all duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.94 }}
+          transition={{ duration: 0.2 }}
+          className="pointer-events-auto flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-white hover:text-charcoal hover:border-transparent transition-colors duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
+          style={{ transition: 'opacity 0.4s ease, background 0.3s ease, color 0.3s ease' }}
         >
-          <CaretRight size={16} weight="light" />
-        </button>
+          <CaretRight size={15} weight="light" />
+        </motion.button>
       </div>
 
     </div>
