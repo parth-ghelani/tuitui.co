@@ -115,7 +115,10 @@ export function ShopCampaignCarousel() {
   return (
     <div
       className="group relative w-full overflow-hidden bg-charcoal"
-      style={{ height: '100svh', minHeight: '100svh' }}
+      style={{
+        height: isMobile ? '55svh' : '80svh',
+        minHeight: isMobile ? '55svh' : '80svh',
+      }}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={() => setPaused(true)}

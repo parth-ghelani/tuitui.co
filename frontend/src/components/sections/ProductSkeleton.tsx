@@ -6,7 +6,7 @@ export function ProductSkeleton({ className }: { className?: string }) {
       className={`group relative flex flex-col justify-between overflow-hidden bg-cream/40 p-4 border border-charcoal/5 rounded-[2rem] shadow-sm ${className}`}
     >
       {/* Padded Mounting Frame */}
-      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.6rem] bg-[#f5efe6] flex items-center justify-center p-0">
+      <div className="relative aspect-[3/2] w-full overflow-hidden rounded-[1.6rem] bg-[#f5efe6] flex items-center justify-center p-0">
         {/* Soft breathing opacity block with a subtle gold highlight */}
         <motion.div
           animate={{
