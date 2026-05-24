@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'motion/react'
-import { useAuthStore } from '../store/useAuthStore'
+import { supabase } from '../lib/supabaseClient'
 import { Check, WarningCircle, Eye, EyeSlash } from '@phosphor-icons/react'
 
 export function SellerLoginPage() {
-  const login = useAuthStore((state) => state.login)
   const navigate = useNavigate()
 
   // Form states
@@ -18,22 +17,29 @@ export function SellerLoginPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setErrorMsg(null)
 
-    const success = await login(email, password)
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
     setIsLoading(false)
 
-    if (success) {
-      setSuccessMsg('Session authenticated. Redirecting to shop...')
-      setTimeout(() => {
-        navigate('/shop')
-      }, 1200)
-    } else {
-      setErrorMsg('Invalid boutique credentials. Please check details.')
+    if (error) {
+      console.error(error.message)
+      setErrorMsg(error.message)
+      return
     }
+
+    console.log('SUCCESS', data)
+    setSuccessMsg('Session authenticated. Redirecting...')
+    setTimeout(() => {
+      navigate('/admin')
+    }, 1200)
   }
 
 
@@ -104,7 +110,7 @@ export function SellerLoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             
             {/* Email Input Field */}
             <div className="relative group">
