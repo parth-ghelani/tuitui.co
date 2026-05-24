@@ -68,17 +68,25 @@ const SLIDES: Slide[] = [
 const INTERVAL_MS = 2000
 
 // ── Cinematic crossfade ──
-// • Enter: imperceptible scale-in (1.005 → 1) so there's no visible "pop"
-// • Exit:  slow opacity fade — image stays full-size so it dissolves cleanly
+// • Enter: scale-in (1.015 → 1) with 1s opacity fade
+// • Exit:  scale-up (1 → 1.015) with 1s opacity fade
 const IMG_ENTER: import('motion/react').Transition = {
-  duration: 1.0,
-  ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
+  opacity: {
+    duration: 1.0,
+    ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+  },
+  scale: {
+    duration: 1.4,
+    ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+  },
+  duration: 1.4,
+  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
 }
 
 const slideVariants = {
-  enter:  { opacity: 0, scale: 1.005 },
+  enter:  { opacity: 0, scale: 1.015 },
   center: { opacity: 1, scale: 1     },
-  exit:   { opacity: 0, scale: 1.0   },
+  exit:   { opacity: 0, scale: 1.015 },
 }
 
 export function ShopCampaignCarousel() {
@@ -182,26 +190,14 @@ export function ShopCampaignCarousel() {
           background: 'linear-gradient(to top, rgba(17,17,17,0.72) 0%, rgba(17,17,17,0.30) 45%, transparent 100%)',
         }}
       />
-      {/* Cream fade at very bottom — blends into shop grid below */}
+      {/* Soft luxury cinematic blend transition between sections */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 z-10"
         style={{
-          height: '18%',
-          background: 'linear-gradient(to top, #FAF8F5 0%, transparent 100%)',
+          height: '24%',
+          background: 'linear-gradient(to bottom, rgba(245,241,232,0) 0%, rgba(245,241,232,0.35) 35%, rgba(245,241,232,0.7) 65%, rgba(245,241,232,1) 100%)',
         }}
       />
-
-      {/* ── PROGRESS BAR — fills over exactly INTERVAL_MS, resets per slide ──── */}
-      <div className="absolute top-0 inset-x-0 h-[2px] z-30 bg-white/10">
-        <motion.div
-          key={`prog-${index}`}
-          className="h-full bg-[#D4A574]/80"
-          initial={{ scaleX: 0, originX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
-          style={{ transformOrigin: 'left center' }}
-        />
-      </div>
 
       {/* ── TEXT CONTENT — staggered line-by-line entry per slide ──────────────── */}
       <div className="absolute inset-x-6 bottom-[15svh] md:inset-x-14 md:bottom-[17svh] z-20 pointer-events-none">
