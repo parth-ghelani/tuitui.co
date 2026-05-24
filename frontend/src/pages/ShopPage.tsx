@@ -52,10 +52,10 @@ function ProductCard({ product, className }: { product: Product; className?: str
       transition={{ duration: 0.95, ease: [0.76, 0, 0.24, 1] }}
       className={`group relative flex flex-col justify-between overflow-hidden bg-cream/40 p-4 border border-charcoal/5 rounded-[2rem] hover:shadow-[0_24px_80px_rgba(17,17,17,0.06)] transition-all duration-750 ${className}`}
     >
-      {/* 3:2 Landscape Image Container */}
+      {/* 4:5 Aspect Ratio Image Container */}
       <Link 
         to={`/product/${product.id}`}
-        className="relative aspect-[3/2] w-full overflow-hidden rounded-[1.6rem] bg-[#f5efe6] flex items-center justify-center pointer-events-auto"
+        className="relative aspect-[4/5] w-full overflow-hidden rounded-[1.6rem] bg-[#f5efe6] flex items-center justify-center pointer-events-auto"
       >
         <motion.img
           src={product.image}

@@ -45,30 +45,6 @@ interface ProductState {
 }
 
 // ---------------------------------------------------------------------------
-// Image translation helper (translates old database seed paths to shop-showcase paths)
-// ---------------------------------------------------------------------------
-function mapLegacyImage(img: string): string {
-  if (!img) return img
-  if (img.startsWith('/images/showcase/')) {
-    if (img.includes('1736')) {
-      return '/images/shop-showcase/change_the_ratio_2K_202605241737 (2).jpeg' // Red lehenga
-    }
-    if (img.includes('1810') || img.includes('1723')) {
-      return '/images/shop-showcase/change_the_ratio_2K_202605241737.jpeg' // Maroon kurta / Udaipur heritage
-    }
-    if (img.includes('hero_202605231903')) {
-      return '/images/shop-showcase/change_the_ratio_2K_202605241751.jpeg' // Floral gown
-    }
-    if (img.includes('navratri_top') || img.includes('1000000419') || img.includes('202605221056')) {
-      return '/images/shop-showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg' // Navratri blouse
-    }
-    // Fallback/Default matching coordination set
-    return '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg'
-  }
-  return img
-}
-
-// ---------------------------------------------------------------------------
 // Local seed data (fallback when Supabase table is empty or unreachable)
 // ---------------------------------------------------------------------------
 const initialProducts: Product[] = [
@@ -78,7 +54,7 @@ const initialProducts: Product[] = [
     category: 'Indian Collection',
     price: '₹32,500',
     priceValue: 32500,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (2).jpeg',
+    image: '/images/showcase/change_the_clothing_to_the_202605211736.jpeg',
     description: 'An ethereal Varanasi silk lehenga featuring gold thread embroidery and structured pleats.',
     colors: ['#E8DED1', '#8B7355', '#111111'],
     sizes: ['S', 'M', 'L'],
@@ -93,7 +69,7 @@ const initialProducts: Product[] = [
     category: 'Indian Collection',
     price: '₹14,200',
     priceValue: 14200,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737.jpeg',
+    image: '/images/showcase/add_some_natural_light_on_202605211810.jpeg',
     description: 'Breathable Chanderi weave kurta paired with tapered trousers and a matching hand-woven cotton dupatta.',
     colors: ['#8B7355', '#6B4B44'],
     sizes: ['S', 'M', 'L'],
@@ -108,7 +84,7 @@ const initialProducts: Product[] = [
     category: 'Indian Collection',
     price: '₹28,500',
     priceValue: 28500,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241751.jpeg',
+    image: '/images/showcase/now_increase_the_quality_of_202605211723.jpeg',
     description: 'A celebratory silhouette in silk georgette, structured with a flared sharara and gota borders.',
     colors: ['#D4A574', '#E8DED1'],
     sizes: ['S', 'M', 'L'],
@@ -123,7 +99,7 @@ const initialProducts: Product[] = [
     category: 'Indian Collection',
     price: '₹19,500',
     priceValue: 19500,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737.jpeg',
+    image: '/images/showcase/change_the_clothing_to_the_202605211736.jpeg',
     description: 'Ethereal translucent silk organza, layering a soft slip and finished with fine needlepoint embellishments.',
     colors: ['#F8F5F1'],
     sizes: ['XS', 'S', 'M'],
@@ -138,7 +114,7 @@ const initialProducts: Product[] = [
     category: 'Indian Collection',
     price: '₹22,800',
     priceValue: 22800,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    image: '/images/showcase/now_increase_the_quality_of_202605211723.jpeg',
     description: 'Plush micro-velvet kurta set detailed with gota patti handwork, paired with wide-leg trousers.',
     colors: ['#6B4B44', '#8B7355'],
     sizes: ['S', 'M', 'L'],
@@ -153,7 +129,7 @@ const initialProducts: Product[] = [
     category: 'Navratri Collection',
     price: '₹12,800',
     priceValue: 12800,
-    image: '/images/shop-showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
+    image: '/images/showcase/navratri_top.jpeg',
     description: 'Intricately embroidered celebratory bodice, featuring hand-crafted mirrors and detailed thread-work.',
     colors: ['#D4A574', '#6B4B44'],
     sizes: ['XS', 'S', 'M', 'L'],
@@ -168,7 +144,7 @@ const initialProducts: Product[] = [
     category: 'Navratri Collection',
     price: '₹16,500',
     priceValue: 16500,
-    image: '/images/shop-showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
+    image: '/images/showcase/1000000419.jpg_202605231803.jpeg',
     description: 'A heritage vest showcasing traditional mirror work and heavy cotton embellishments from Kutch.',
     colors: ['#F8F5F1', '#111111'],
     sizes: ['S', 'M', 'L'],
@@ -183,7 +159,7 @@ const initialProducts: Product[] = [
     category: 'Western Collection',
     price: '₹18,900',
     priceValue: 18900,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    image: '/images/showcase/western_showcase.jpeg',
     description: 'Double-breasted blazer in premium water-resistant linen twill with structural shoulder details.',
     colors: ['#8B7355', '#E8DED1', '#111111'],
     sizes: ['S', 'M', 'L', 'XL'],
@@ -198,7 +174,7 @@ const initialProducts: Product[] = [
     category: 'Western Collection',
     price: '₹24,000',
     priceValue: 24000,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221051.jpeg',
     description: 'Elegant wrap midi dress crafted in rich structured satin with architectural pleating.',
     colors: ['#F8F5F1', '#D4A574'],
     sizes: ['XS', 'S', 'M', 'L'],
@@ -213,7 +189,7 @@ const initialProducts: Product[] = [
     category: 'Western Collection',
     price: '₹42,000',
     priceValue: 42000,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241751.jpeg',
+    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
     description: 'A breathtaking floor-length couture dress featuring clean lines and a structured asymmetric silhouette.',
     colors: ['#111111', '#E8DED1'],
     sizes: ['M', 'L'],
@@ -228,7 +204,7 @@ const initialProducts: Product[] = [
     category: 'Western Collection',
     price: '₹48,500',
     priceValue: 48500,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    image: '/images/showcase/hero_202605231903.jpeg',
     description: 'A luxurious oversized silk wrap trench designed for dynamic seasonal layering.',
     colors: ['#8B7355', '#6B4B44'],
     sizes: ['S', 'M', 'L'],
@@ -243,7 +219,7 @@ const initialProducts: Product[] = [
     category: 'Western Collection',
     price: '₹8,200',
     priceValue: 8200,
-    image: '/images/shop-showcase/change_the_ratio_2K_202605241737 (1).jpeg',
+    image: '/images/showcase/western_showcase.jpeg',
     description: 'A modern utilitarian vest structured with clean panels, silver zipper hardware, and adjustable side straps.',
     colors: ['#8B7355', '#E8DED1'],
     sizes: ['M', 'L'],
@@ -310,7 +286,7 @@ function rowToProduct(row: any): Product {
     price: row.price,
     priceValue: row.price_value,
     discountPrice: row.discount_price ?? undefined,
-    image: mapLegacyImage(row.image),
+    image: row.image,
     description: row.description,
     colors: row.colors ?? [],
     sizes: row.sizes ?? [],

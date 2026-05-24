@@ -54,7 +54,7 @@ export function ProductPage() {
         <div className="mx-auto grid w-[min(1200px,92vw)] gap-12 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-charcoal/10 bg-white/80 p-3 shadow-sm">
-              <div className="overflow-hidden rounded-[calc(2rem-0.5rem)] aspect-[3/2] bg-[#f5efe6] flex items-center justify-center">
+              <div className="overflow-hidden rounded-[calc(2rem-0.5rem)] aspect-[4/5] bg-[#f5efe6] flex items-center justify-center">
                 <img
                   src={activeImage}
                   alt={product.name}
@@ -75,7 +75,7 @@ export function ProductPage() {
                       : 'border-charcoal/10 bg-white/80 hover:border-charcoal/30'
                   }`}
                 >
-                  <div className="aspect-[3/2] w-full rounded-[calc(1.5rem-0.5rem)] overflow-hidden bg-[#f5efe6] flex items-center justify-center">
+                  <div className="aspect-[4/5] w-full rounded-[calc(1.5rem-0.5rem)] overflow-hidden bg-[#f5efe6] flex items-center justify-center">
                     <img
                       src={image}
                       alt={`Product alternate ${index + 1}`}
