@@ -10,13 +10,15 @@ const queryClient = new QueryClient()
 
 function AppInner() {
   useLenis()
-  const restoreSession = useAuthStore((s) => s.restoreSession)
+  const init = useAuthStore((s) => s.init)
   const fetchProducts = useProductStore((s) => s.fetchProducts)
 
   useEffect(() => {
-    restoreSession()
+    // init() subscribes to Supabase auth state changes and returns unsubscribe
+    const unsubscribe = init()
     fetchProducts()
-  }, [restoreSession, fetchProducts])
+    return unsubscribe
+  }, [init, fetchProducts])
 
   return (
     <>

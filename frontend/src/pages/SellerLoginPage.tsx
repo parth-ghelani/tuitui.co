@@ -23,8 +23,8 @@ export function SellerLoginPage() {
     setErrorMsg(null)
 
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+      email: email.trim().toLowerCase(),
+      password: password.trim(),
     })
 
     setIsLoading(false)
@@ -35,11 +35,15 @@ export function SellerLoginPage() {
       return
     }
 
-    console.log('SUCCESS', data)
+    // Resolve destination from the authenticated email
+    const authedEmail = data.user?.email?.toLowerCase() ?? ''
+    const destination = authedEmail === 'admin@tuitui.co' ? '/admin' : '/seller'
+
+    console.log('SUCCESS — redirecting to', destination)
     setSuccessMsg('Session authenticated. Redirecting...')
     setTimeout(() => {
-      navigate('/admin')
-    }, 1200)
+      navigate(destination, { replace: true })
+    }, 800)
   }
 
 
