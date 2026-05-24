@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
-import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 type Slide = {
   tagline: string
@@ -20,13 +19,13 @@ type Slide = {
 // ── 5 curated shop-showcase images — each reviewed visually ─────────────────
 const SLIDES: Slide[] = [
   {
-    // Portrait tall image — floral gown, full length, model back-facing
+    // Landscape wide — floral gown, Udaipur, manually cropped by user to 2K ratio
     tagline: 'SS / 2026 Campaign',
     title: 'Editorial Floral Gown',
     subtitle: 'Pleated maxi in hand-printed floral silk. Shot at Lake Pichola, Udaipur.',
-    image: '/images/shop-showcase/Ultra_realistic_luxury_fashion_editorial_202605241208.jpeg',
-    desktop: '62% top',    // show more of gown hem, model centered
-    mobile: '60% top',
+    image: '/images/shop-showcase/change_the_ratio_2K_202605241751.jpeg',
+    desktop: 'center',
+    mobile: 'center',
   },
   {
     // Landscape wide — full-length red lehenga, temple courtyard, diya decor
@@ -69,25 +68,24 @@ const SLIDES: Slide[] = [
 const INTERVAL_MS = 3000
 
 // ── Cinematic crossfade ──
-// • Enter: imperceptible scale-in (1.008 → 1) so there's no visible "pop"
+// • Enter: imperceptible scale-in (1.005 → 1) so there's no visible "pop"
 // • Exit:  slow opacity fade — image stays full-size so it dissolves cleanly
-// • Both transitions are longer than the swap feels, creating an overlap window
 const IMG_ENTER: import('motion/react').Transition = {
   duration: 1.4,
   ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
 }
 
 const slideVariants = {
-  enter:  { opacity: 0, scale: 1.008 },
+  enter:  { opacity: 0, scale: 1.005 },
   center: { opacity: 1, scale: 1     },
   exit:   { opacity: 0, scale: 1.0   },
 }
 
 export function ShopCampaignCarousel() {
   const [index, setIndex] = useState(0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const [paused, setPaused] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ── Responsive ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -97,31 +95,20 @@ export function ShopCampaignCarousel() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // ── Auto-advance every 3 s ────────────────────────────────────────────────
-  const advance = useCallback(() => {
-    setIndex((i) => (i + 1) % SLIDES.length)
-  }, [])
-
-  const resetTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current)
-    timerRef.current = setInterval(advance, INTERVAL_MS)
-  }, [advance])
-
+  // ── Auto-advance every 3 s with transition safety guard ─────────────────
   useEffect(() => {
-    if (paused) {
-      if (timerRef.current) clearInterval(timerRef.current)
-      return
-    }
-    timerRef.current = setInterval(advance, INTERVAL_MS)
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current)
-    }
-  }, [paused, advance])
+    if (paused) return
 
-  // ── Manual nav ────────────────────────────────────────────────────────────
-  const goNext = () => { setIndex((i) => (i + 1) % SLIDES.length); resetTimer() }
-  const goPrev = () => { setIndex((i) => (i - 1 + SLIDES.length) % SLIDES.length); resetTimer() }
-  const goTo   = (i: number) => { if (i !== index) { setIndex(i); resetTimer() } }
+    const timer = setTimeout(() => {
+      setIndex((i) => {
+        if (isTransitioning) return i // prevent transition queue overlap
+        setIsTransitioning(true)
+        return (i + 1) % SLIDES.length
+      })
+    }, INTERVAL_MS)
+
+    return () => clearTimeout(timer)
+  }, [paused, index, isTransitioning])
 
   const slide = SLIDES[index]
 
@@ -135,13 +122,8 @@ export function ShopCampaignCarousel() {
       onTouchEnd={() => setPaused(false)}
     >
 
-      {/* ── SLIDES — cinematic crossfade, no direction, no pop ──────────────── */}
+      {/* ── SLIDES — cinematic crossfade, no direction, no pop, hardware accelerated ── */}
       <div className="absolute inset-0 z-0">
-        {/*
-          mode="popLayout" lets the entering slide layer on top immediately
-          while the exiting slide dissolves underneath — true crossfade.
-          mode="sync" causes them to fight (enter waits for exit = abrupt gap).
-        */}
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={index}
@@ -150,8 +132,13 @@ export function ShopCampaignCarousel() {
             animate="center"
             exit="exit"
             transition={IMG_ENTER}
+            onAnimationComplete={() => setIsTransitioning(false)}
             className="absolute inset-0"
-            style={{ willChange: 'opacity, transform' }}
+            style={{
+              willChange: 'opacity, transform',
+              transform: 'translateZ(0)',
+              backfaceVisibility: 'hidden',
+            }}
           >
             {/*
               Ken Burns: very slow continuous drift on the ACTIVE image.
@@ -168,6 +155,9 @@ export function ShopCampaignCarousel() {
                 objectPosition: isMobile ? slide.mobile : slide.desktop,
                 filter: 'brightness(0.87) contrast(1.03) saturate(1.05)',
                 animation: 'kenburns 12s ease-in-out infinite alternate',
+                willChange: 'transform',
+                transform: 'translateZ(0)',
+                backfaceVisibility: 'hidden',
               }}
             />
           </motion.div>
@@ -210,11 +200,6 @@ export function ShopCampaignCarousel() {
           transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
           style={{ transformOrigin: 'left center' }}
         />
-      </div>
-
-      {/* ── SLIDE COUNTER ─────────────────────────────────────────────────────── */}
-      <div className="absolute top-6 right-6 z-30 text-white/50 text-[9px] uppercase tracking-[0.3em] font-sans tabular-nums select-none">
-        {String(index + 1).padStart(2, '0')} / {String(SLIDES.length).padStart(2, '0')}
       </div>
 
       {/* ── TEXT CONTENT — staggered line-by-line entry per slide ──────────────── */}
@@ -271,54 +256,9 @@ export function ShopCampaignCarousel() {
         </AnimatePresence>
       </div>
 
-      {/* ── DOT INDICATORS ────────────────────────────────────────────────────── */}
-      <div className="absolute bottom-[10svh] inset-x-6 md:inset-x-14 z-20 flex items-center gap-2">
-        {SLIDES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => goTo(i)}
-            aria-label={`Go to slide ${i + 1}`}
-            className="h-6 flex items-center justify-center focus:outline-none"
-          >
-            <div
-              className={`rounded-full transition-all duration-400 ${
-                i === index
-                  ? 'w-6 h-[3px] bg-[#D4A574]'
-                  : 'w-[5px] h-[5px] bg-white/25 hover:bg-white/50'
-              }`}
-            />
-          </button>
-        ))}
-      </div>
-
-      {/* ── ARROW CONTROLS — fade in on hover, smooth 400ms ──────────────────── */}
-      <div className="absolute inset-y-0 left-4 right-4 md:left-6 md:right-6 flex items-center justify-between z-20 pointer-events-none">
-        <motion.button
-          onClick={goPrev}
-          aria-label="Previous slide"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.94 }}
-          transition={{ duration: 0.2 }}
-          className="pointer-events-auto flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-white hover:text-charcoal hover:border-transparent transition-colors duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
-          style={{ transition: 'opacity 0.4s ease, background 0.3s ease, color 0.3s ease' }}
-        >
-          <CaretLeft size={15} weight="light" />
-        </motion.button>
-        <motion.button
-          onClick={goNext}
-          aria-label="Next slide"
-          whileHover={{ scale: 1.08 }}
-          whileTap={{ scale: 0.94 }}
-          transition={{ duration: 0.2 }}
-          className="pointer-events-auto flex items-center justify-center h-11 w-11 rounded-full border border-white/20 bg-black/20 text-white backdrop-blur-md hover:bg-white hover:text-charcoal hover:border-transparent transition-colors duration-300 focus:outline-none opacity-0 group-hover:opacity-100 shadow-lg"
-          style={{ transition: 'opacity 0.4s ease, background 0.3s ease, color 0.3s ease' }}
-        >
-          <CaretRight size={15} weight="light" />
-        </motion.button>
-      </div>
-
     </div>
   )
 }
 
 export default ShopCampaignCarousel
+
