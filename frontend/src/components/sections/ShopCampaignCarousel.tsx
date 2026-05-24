@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'motion/react'
 
 type Slide = {
@@ -65,13 +65,13 @@ const SLIDES: Slide[] = [
   },
 ]
 
-const INTERVAL_MS = 3000
+const INTERVAL_MS = 2000
 
 // ── Cinematic crossfade ──
 // • Enter: imperceptible scale-in (1.005 → 1) so there's no visible "pop"
 // • Exit:  slow opacity fade — image stays full-size so it dissolves cleanly
 const IMG_ENTER: import('motion/react').Transition = {
-  duration: 1.4,
+  duration: 1.0,
   ease: [0.16, 1, 0.3, 1] as [number, number, number, number],
 }
 
@@ -83,7 +83,7 @@ const slideVariants = {
 
 export function ShopCampaignCarousel() {
   const [index, setIndex] = useState(0)
-  const [isTransitioning, setIsTransitioning] = useState(false)
+  const isTransitioningRef = useRef(false)
   const [paused, setPaused] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -95,20 +95,18 @@ export function ShopCampaignCarousel() {
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // ── Auto-advance every 3 s with transition safety guard ─────────────────
+  // ── Auto-advance every 2 s with transition safety guard ─────────────────
   useEffect(() => {
     if (paused) return
 
     const timer = setTimeout(() => {
-      setIndex((i) => {
-        if (isTransitioning) return i // prevent transition queue overlap
-        setIsTransitioning(true)
-        return (i + 1) % SLIDES.length
-      })
+      if (isTransitioningRef.current) return // prevent transition queue overlap
+      isTransitioningRef.current = true
+      setIndex((i) => (i + 1) % SLIDES.length)
     }, INTERVAL_MS)
 
     return () => clearTimeout(timer)
-  }, [paused, index, isTransitioning])
+  }, [paused, index])
 
   const slide = SLIDES[index]
 
@@ -135,7 +133,7 @@ export function ShopCampaignCarousel() {
             animate="center"
             exit="exit"
             transition={IMG_ENTER}
-            onAnimationComplete={() => setIsTransitioning(false)}
+            onAnimationComplete={() => { isTransitioningRef.current = false }}
             className="absolute inset-0"
             style={{
               willChange: 'opacity, transform',
