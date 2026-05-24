@@ -1,0 +1,8 @@
+.DS_Store
+.antigravitycli/
+.claude-flow/
+node_modules/
+dist/
+build/
+.env*.local
+*.log

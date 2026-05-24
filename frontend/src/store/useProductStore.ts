@@ -1,0 +1,310 @@
+import { create } from 'zustand'
+
+export interface Product {
+  id: string
+  name: string
+  category: string
+  price: string
+  priceValue: number
+  discountPrice?: string
+  image: string
+  description: string
+  colors: string[]
+  sizes: string[]
+  quantity: number
+  stockStatus: 'in-stock' | 'out-of-stock' | 'low-stock'
+  sellerId: string
+  isFeatured?: boolean
+}
+
+export interface HeroSlide {
+  id: string
+  index: string
+  subtitle: string
+  title: string
+  heading: string
+  narrative: string
+  imageBg: string
+  imageFg: string
+  ctaText: string
+  label: string
+  place: string
+  coords: string
+}
+
+interface ProductState {
+  products: Product[]
+  heroSlides: HeroSlide[]
+  addProduct: (product: Omit<Product, 'id'>) => void
+  updateProduct: (id: string, updatedFields: Partial<Product>) => void
+  deleteProduct: (id: string) => void
+  updateHeroSlide: (index: number, updatedFields: Partial<HeroSlide>) => void
+}
+
+const initialProducts: Product[] = [
+  {
+    id: 'ind-1',
+    name: 'Mridula Silk Lehenga',
+    category: 'Indian Collection',
+    price: '₹32,500',
+    priceValue: 32500,
+    image: '/images/showcase/change_the_clothing_to_the_202605211736.jpeg',
+    description: 'An ethereal Varanasi silk lehenga featuring gold thread embroidery and structured pleats.',
+    colors: ['#E8DED1', '#8B7355', '#111111'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 12,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-1',
+    isFeatured: true,
+  },
+  {
+    id: 'ind-2',
+    name: 'Zoya Chanderi Kurta Set',
+    category: 'Indian Collection',
+    price: '₹14,200',
+    priceValue: 14200,
+    image: '/images/showcase/add_some_natural_light_on_202605211810.jpeg',
+    description: 'Breathable Chanderi weave kurta paired with tapered trousers and a matching hand-woven cotton dupatta.',
+    colors: ['#8B7355', '#6B4B44'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 18,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-1',
+    isFeatured: true,
+  },
+  {
+    id: 'ind-3',
+    name: 'Ishwari Silk Sharara',
+    category: 'Indian Collection',
+    price: '₹28,500',
+    priceValue: 28500,
+    image: '/images/showcase/now_increase_the_quality_of_202605211723.jpeg',
+    description: 'A celebratory silhouette in silk georgette, structured with a flared sharara and gota borders.',
+    colors: ['#D4A574', '#E8DED1'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 15,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-2',
+    isFeatured: false,
+  },
+  {
+    id: 'ind-4',
+    name: 'Mewar Organza Anarkali',
+    category: 'Indian Collection',
+    price: '₹19,500',
+    priceValue: 19500,
+    image: '/images/showcase/change_the_clothing_to_the_202605211736.jpeg',
+    description: 'Ethereal translucent silk organza, layering a soft slip and finished with fine needlepoint embellishments.',
+    colors: ['#F8F5F1'],
+    sizes: ['XS', 'S', 'M'],
+    quantity: 6,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-3',
+    isFeatured: true,
+  },
+  {
+    id: 'ind-5',
+    name: 'Velvet Palazzo Suit',
+    category: 'Indian Collection',
+    price: '₹22,800',
+    priceValue: 22800,
+    image: '/images/showcase/now_increase_the_quality_of_202605211723.jpeg',
+    description: 'Plush micro-velvet kurta set detailed with gota patti handwork, paired with wide-leg trousers.',
+    colors: ['#6B4B44', '#8B7355'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 3,
+    stockStatus: 'low-stock',
+    sellerId: 'seller-3',
+    isFeatured: false,
+  },
+  {
+    id: 'nav-1',
+    name: 'Navratri Couture Blouse',
+    category: 'Navratri Collection',
+    price: '₹12,800',
+    priceValue: 12800,
+    image: '/images/showcase/navratri_top.jpeg',
+    description: 'Intricately embroidered celebratory bodice, featuring hand-crafted mirrors and detailed thread-work.',
+    colors: ['#D4A574', '#6B4B44'],
+    sizes: ['XS', 'S', 'M', 'L'],
+    quantity: 8,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-3',
+    isFeatured: true,
+  },
+  {
+    id: 'nav-2',
+    name: 'Rabari Heritage Jacket',
+    category: 'Navratri Collection',
+    price: '₹16,500',
+    priceValue: 16500,
+    image: '/images/showcase/1000000419.jpg_202605231803.jpeg',
+    description: 'A heritage vest showcasing traditional mirror work and heavy cotton embellishments from Kutch.',
+    colors: ['#F8F5F1', '#111111'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 5,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-2',
+    isFeatured: false,
+  },
+  {
+    id: 'west-1',
+    name: 'Architectural Linen Blazer',
+    category: 'Western Collection',
+    price: '₹18,900',
+    priceValue: 18900,
+    image: '/images/showcase/western_showcase.jpeg',
+    description: 'Double-breasted blazer in premium water-resistant linen twill with structural shoulder details.',
+    colors: ['#8B7355', '#E8DED1', '#111111'],
+    sizes: ['S', 'M', 'L', 'XL'],
+    quantity: 14,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-1',
+    isFeatured: true,
+  },
+  {
+    id: 'west-2',
+    name: 'Luxe Satin Wrap Dress',
+    category: 'Western Collection',
+    price: '₹24,000',
+    priceValue: 24000,
+    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221051.jpeg',
+    description: 'Elegant wrap midi dress crafted in rich structured satin with architectural pleating.',
+    colors: ['#F8F5F1', '#D4A574'],
+    sizes: ['XS', 'S', 'M', 'L'],
+    quantity: 9,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-2',
+    isFeatured: true,
+  },
+  {
+    id: 'west-3',
+    name: 'Asymmetric Editorial Gown',
+    category: 'Western Collection',
+    price: '₹42,000',
+    priceValue: 42000,
+    image: '/images/showcase/Ultra_realistic_faceless_luxury_fashion_202605221056.jpeg',
+    description: 'A breathtaking floor-length couture dress featuring clean lines and a structured asymmetric silhouette.',
+    colors: ['#111111', '#E8DED1'],
+    sizes: ['M', 'L'],
+    quantity: 2,
+    stockStatus: 'low-stock',
+    sellerId: 'seller-1',
+    isFeatured: false,
+  },
+  {
+    id: 'west-4',
+    name: 'Campaign Silk Trench',
+    category: 'Western Collection',
+    price: '₹48,500',
+    priceValue: 48500,
+    image: '/images/showcase/hero_202605231903.jpeg',
+    description: 'A luxurious oversized silk wrap trench designed for dynamic seasonal layering.',
+    colors: ['#8B7355', '#6B4B44'],
+    sizes: ['S', 'M', 'L'],
+    quantity: 7,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-2',
+    isFeatured: true,
+  },
+  {
+    id: 'west-5',
+    name: 'Minimalist Utility Vest',
+    category: 'Western Collection',
+    price: '₹8,200',
+    priceValue: 8200,
+    image: '/images/showcase/western_showcase.jpeg',
+    description: 'A modern utilitarian vest structured with clean panels, silver zipper hardware, and adjustable side straps.',
+    colors: ['#8B7355', '#E8DED1'],
+    sizes: ['M', 'L'],
+    quantity: 4,
+    stockStatus: 'in-stock',
+    sellerId: 'seller-2',
+    isFeatured: false,
+  }
+]
+
+const initialHeroSlides: HeroSlide[] = [
+  {
+    id: 'udaipur',
+    index: '01',
+    subtitle: 'THE UDAIPUR SAGA',
+    title: 'Mewar Monologue',
+    heading: 'Whispering Silk, Silent Stone.',
+    narrative: 'An aesthetic dialogue between Mewar’s historic fortress walls and the fluid grace of modern hand-loomed drapes. Crafted in raw tussar silk and structural handlooms.',
+    imageBg: '/images/editorial/udaipur-1.jpg',
+    imageFg: '/images/editorial/udaipur-1.jpg',
+    ctaText: 'Enter Udaipur',
+    label: 'CAMPAIGN IV / 2026',
+    place: 'MEWAR, RAJASTHAN',
+    coords: '24.58° N, 73.71° E',
+  },
+  {
+    id: 'desert',
+    index: '02',
+    subtitle: 'DESERT SUNSET SAGA',
+    title: 'Dunes & Drape',
+    heading: 'Where Sand Meets Symphony.',
+    narrative: 'Soft sandstone shades and fluid resort linen drifting effortlessly through the silent dunes of Jaisalmer. Crafted for the modern nomad.',
+    imageBg: '/images/editorial/desert-1.jpg',
+    imageFg: '/images/editorial/desert-1.jpg',
+    ctaText: 'Explore Dunes',
+    label: 'CAMPAIGN V / 2026',
+    place: 'THAR DUNES, JAISALMER',
+    coords: '26.91° N, 70.90° E',
+  },
+  {
+    id: 'saree',
+    index: '03',
+    subtitle: 'THE ROYAL SAREES',
+    title: 'Heritage Weft',
+    heading: 'Woven Dreams, Unspoken Grace.',
+    narrative: 'Intricately hand-woven metallic sarees and ensembles, layered with contemporary structural tailoring. An ode to Varanasi’s living looms.',
+    imageBg: '/images/editorial/saree-1.jpg',
+    imageFg: '/images/editorial/saree-1.jpg',
+    ctaText: 'Discover drapes',
+    label: 'CAMPAIGN VI / 2026',
+    place: 'VARANASI ATELIER',
+    coords: '25.31° N, 82.97° E',
+  },
+]
+
+export const useProductStore = create<ProductState>((set) => ({
+  products: initialProducts,
+  heroSlides: initialHeroSlides,
+  
+  addProduct: (newProd) => {
+    set((state) => {
+      const newId = `${newProd.category.toLowerCase().startsWith('indian') ? 'ind' : 'west'}-${state.products.length + 1}`
+      const createdProduct: Product = {
+        ...newProd,
+        id: newId,
+      }
+      return { products: [...state.products, createdProduct] }
+    })
+  },
+  
+  updateProduct: (id, updatedFields) => {
+    set((state) => ({
+      products: state.products.map((p) =>
+        p.id === id ? { ...p, ...updatedFields } : p
+      )
+    }))
+  },
+  
+  deleteProduct: (id) => {
+    set((state) => ({
+      products: state.products.filter((p) => p.id !== id)
+    }))
+  },
+
+  updateHeroSlide: (index, updatedFields) => {
+    set((state) => {
+      const slides = [...state.heroSlides]
+      if (slides[index]) {
+        slides[index] = { ...slides[index], ...updatedFields }
+      }
+      return { heroSlides: slides }
+    })
+  }
+}))
